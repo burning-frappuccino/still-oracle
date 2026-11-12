@@ -1,0 +1,4 @@
+qa/
+original-sha256.json
+deployment-info.json
+*.zip
