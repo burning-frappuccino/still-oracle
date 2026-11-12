@@ -67,4 +67,47 @@ test('79 distinct complete artworks with unique SVG ids and no undefined tokens'
 test('card interpretation includes concrete risks and actions in both orientations', () => {
   for (const card of deck) for (const orientation of [false, true]) for (const topic of Object.keys(C.TOPICS)) { const result = C.interpret(card, orientation, topic, 1); assert.ok(result.meaning && result.risk && result.action && result.question); assert.equal(result.position, '潜在盲点'); assert.equal(result.topic.name, C.TOPICS[topic].name); }
 });
+function summaryRecord(ids = [0, 16, 14], orientations = [false, false, false], topic = 'general') {
+  return { ...C.makeRecord(deck, topic, '', '2026-11-12', rng()), cards: ids.map((id, i) => ({ id, reversed: orientations[i] })) };
+}
+test('spread summary links three positions, named orientations and concrete action', () => {
+  const record = summaryRecord(); const summary = C.summarizeSpread(record, deck);
+  for (const reference of summary.references) { assert.ok(summary.narrative.includes(reference.label)); assert.ok(reference.position); }
+  assert.equal(summary.references.length, 3); assert.equal(summary.priorityAction, deck.find(x => x.id === record.cards[2].id).upright.action);
+  assert.ok(summary.actionBridge.includes('新方向与试探')); assert.ok(summary.tension.includes('高塔（正位）'));
+  assert.ok(summary.tension.includes(deck.find(x => x.id === 16).upright.risk)); assert.ok(summary.method.includes('固定规则'));
+});
+test('spread summary is stable, derived only, and keeps existing records/schema untouched', () => {
+  const record = summaryRecord(); const before = JSON.stringify(record); const first = C.summarizeSpread(record, deck);
+  assert.deepEqual(first, C.summarizeSpread(record, deck)); assert.equal(JSON.stringify(record), before); assert.ok(!Object.hasOwn(record, 'summary'));
+  const imported = C.parseBackup(JSON.stringify({ schemaVersion: 1, records: { [record.date]: record } }), deck);
+  assert.deepEqual(first, C.summarizeSpread(imported[record.date], deck));
+});
+test('spread summary responds to different cards, order, topic and every orientation', () => {
+  const record = summaryRecord(); const first = C.summarizeSpread(record, deck);
+  assert.notEqual(first.narrative, C.summarizeSpread(summaryRecord([1, 18, 19]), deck).narrative);
+  assert.notEqual(first.narrative, C.summarizeSpread(summaryRecord([14, 16, 0]), deck).narrative);
+  assert.notEqual(first.narrative, C.summarizeSpread(summaryRecord([0, 16, 14], [false, false, false], 'study'), deck).narrative);
+  for (let i = 0; i < 3; i++) { const orientations = [false, false, false]; orientations[i] = true; const reversed = C.summarizeSpread(summaryRecord([0, 16, 14], orientations), deck); assert.notEqual(first.narrative, reversed.narrative); assert.ok(reversed.narrative.includes('逆位')); }
+});
+test('spread synthesis uses suit and rank context and does not score fortune by reversals', () => {
+  for (const card of deck) {
+    const ids = [card.id, (card.id + 1) % 78, (card.id + 2) % 78]; const summary = C.summarizeSpread(summaryRecord(ids, [true, true, true]), deck);
+    assert.ok(summary.narrative && summary.tension && summary.priorityAction && summary.checkpoint); assert.equal(Object.hasOwn(summary, 'score'), false);
+    assert.ok(!/必然|注定|灾难将|好运指数|凶吉/.test(summary.narrative));
+  }
+  const minor = C.summarizeSpread(summaryRecord([22, 36, 50]), deck); assert.ok(/行动动力|感受与关系|想法与判断|资源与实际安排/.test(minor.narrative));
+});
+test('untrusted question is background only and never becomes summary markup', () => {
+  const record = summaryRecord(); const first = C.summarizeSpread(record, deck);
+  record.question = '<img src=x onerror=alert(1)>'; record.reflection = '<script>bad()</script>';
+  assert.deepEqual(first, C.summarizeSpread(record, deck)); assert.ok(!JSON.stringify(C.summarizeSpread(record, deck)).includes('<img'));
+  const app = fs.readFileSync(path.join(__dirname, 'dist/app.js'), 'utf8');
+  for (const id of ['summary-title', 'summary-narrative', 'summary-tension', 'summary-action', 'summary-action-bridge', 'summary-checkpoint']) assert.ok(app.includes(`$('${id}').textContent =`));
+});
+test('incomplete, duplicate or invalid spread rejected instead of invented interpretation', () => {
+  const record = summaryRecord(); assert.throws(() => C.summarizeSpread({ ...record, cards: record.cards.slice(0, 2) }, deck));
+  assert.throws(() => C.summarizeSpread({ ...record, cards: [record.cards[0], record.cards[0], record.cards[2]] }, deck));
+  assert.throws(() => C.summarizeSpread({ ...record, topic: '__proto__' }, deck));
+});
 console.log(`\n${passed}/${passed} tests passed. No divinatory effectiveness claim is tested or established.`);

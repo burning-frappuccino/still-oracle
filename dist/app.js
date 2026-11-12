@@ -35,7 +35,7 @@
         const art = el('span', 'card-art' + (draw.reversed ? ' reversed' : '')); art.innerHTML = window.tarotArtwork(card); art.setAttribute('aria-hidden', 'true');
         face.append(art, el('span', 'card-heading', card.arcana === 'major' ? String(card.rank).padStart(2, '0') : card.suit.toUpperCase()), el('span', 'card-title', card.name), el('span', 'card-subtitle', card.english.toUpperCase()));
         button.append(face, el('span', 'card-orientation', draw.reversed ? 'REVERSED · 逆位' : 'UPRIGHT · 正位'));
-        button.addEventListener('click', () => { selectCard(i); $('reading-section').scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' }); });
+        button.addEventListener('click', () => { selectCard(i); document.querySelector('.reading-tabs').scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' }); });
       }
       spread.append(button);
     }
@@ -60,6 +60,7 @@
     $('reading-context').textContent = `${formatDate(currentRecord.date)} · ${C.TOPICS[currentRecord.topic].name}`;
     $('reading-question').hidden = !currentRecord.question;
     $('reading-question').textContent = currentRecord.question ? `今日提问：${currentRecord.question}` : '';
+    renderSummary();
     const tabs = document.querySelector('.reading-tabs'); tabs.replaceChildren();
     currentRecord.cards.forEach((draw, index) => {
       const card = getCard(draw); const button = el('button', 'reading-tab', `${C.POSITIONS[index]} · ${card.name}`);
@@ -80,6 +81,23 @@
     renderDetail();
     for (const field of ['intention', 'reflection', 'match']) $(field).value = currentRecord[field];
     $('action-done').value = currentRecord.actionDone;
+  }
+  function renderSummary() {
+    const summary = C.summarizeSpread(currentRecord, deck);
+    $('summary-title').textContent = summary.title;
+    $('summary-narrative').textContent = summary.narrative;
+    $('summary-tension').textContent = summary.tension;
+    $('summary-action').textContent = summary.priorityAction;
+    $('summary-action-bridge').textContent = summary.actionBridge;
+    $('summary-topic-action').textContent = summary.topicAction;
+    $('summary-checkpoint').textContent = summary.checkpoint;
+    $('summary-method').textContent = summary.method;
+    const references = $('summary-references'); references.replaceChildren();
+    summary.references.forEach((reference, index) => {
+      const item = el('span', 'summary-reference');
+      item.append(el('span', 'summary-reference-position', `0${index + 1} · ${reference.position}`), el('span', 'summary-reference-card', reference.label));
+      references.append(item);
+    });
   }
   function renderDetail() {
     if (!currentRecord) return;
@@ -129,6 +147,7 @@
         buttons[i].classList.add('revealed');
       }
       selectedCard = 0; renderReading();
+      $('spread-summary').scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
       announce('今日牌阵已封存。' + currentRecord.cards.map((draw, i) => C.POSITIONS[i] + '，' + getCard(draw).name + (draw.reversed ? '逆位' : '正位')).join('；'));
     } catch (error) { toast(error.message || '抽取失败，请重试。'); }
     finally { drawing = false; renderForm(); if (C.localDate() !== drawDate) refresh(); }

@@ -122,7 +122,89 @@
     const meaning = reversed ? card.reversed : card.upright;
     return { ...meaning, topic: TOPICS[topic] || TOPICS.general, position: POSITIONS[position] || POSITIONS[0] };
   }
-  const api = { STORAGE_KEY, TOPICS, POSITIONS, RATINGS, ACTIONS, localDate, isDate, randomInt, drawCards, makeRecord, validateRecord, parseBackup, createRepository, interpret };
+  // These original symbolic lenses are composition rules, not factual predictions.
+  const MAJOR_LENSES = [
+    ['新方向与试探', '先做低成本试验，不把冲动当自由', '尝试'],
+    ['资源与主动权', '确认手里真正能用的资源，不把说服当成果', '落实'],
+    ['直觉与未知', '把感受和已核实的信息分开', '核实'],
+    ['照顾与滋养', '先确认自己的基本需要，不用付出换认可', '恢复'],
+    ['结构与边界', '区分合理规则与过度控制', '建立边界'],
+    ['学习与既有方法', '检验规则的适用条件，不以权威代替证据', '检验方法'],
+    ['选择与价值取舍', '说清真实需求，不为表面一致而答应', '作出选择'],
+    ['方向与推进', '先检查方向和资源，再决定要不要加速', '聚焦推进'],
+    ['耐心与内在力量', '温和不等于没有底线，疲惫也需要被承认', '稳定节奏'],
+    ['独处与梳理', '保护专注，同时保留有帮助的联系', '留白梳理'],
+    ['变化与可控范围', '不要把偶然顺逆当保证，只调整可控部分', '调整方案'],
+    ['事实与责任', '主动寻找能推翻自己判断的证据', '核对事实'],
+    ['暂停与换个角度', '给等待设期限，不用继续投入证明旧决定', '换个角度'],
+    ['收尾与腾出空间', '只结束已经失效的部分，不把象征当灾祸', '小步收尾'],
+    ['整合与可持续节奏', '允许必要取舍，不以极端补偿维持平衡', '微调节奏'],
+    ['依赖与选择空间', '找出触发旧习惯的条件，不靠羞耻驱动改变', '调整环境'],
+    ['假设与基础修正', '先检查真实裂缝，不把变化夸大成崩溃', '核查基础'],
+    ['希望与恢复', '用可重复的小进展支撑希望，不等奇迹', '积累进展'],
+    ['模糊信息与情绪', '保留不知道的空间，不替别人判断动机', '澄清未知'],
+    ['清晰与表达', '承认成果，也注明仍未解决的难点', '呈现成果'],
+    ['反馈与重新回应', '把责任改写成补救动作，不给整个人定罪', '回应反馈'],
+    ['完成与整合', '明确足够好的交付标准，不无限打磨尾声', '完成交付']
+  ];
+  const SUIT_LENSES = {
+    wands: { focus: '行动动力', guard: '先核对方向与精力，别把忙碌当进展', move: '试着行动', element: '行动' },
+    cups: { focus: '感受与关系', guard: '说清感受和需求，不替别人下结论', move: '澄清感受', element: '感受' },
+    swords: { focus: '想法与判断', guard: '区分事实、推测与担心，给判断找证据', move: '厘清判断', element: '判断' },
+    pentacles: { focus: '资源与实际安排', guard: '核对时间、投入与可持续性，不透支基本需要', move: '落实一步', element: '落实' }
+  };
+  const RANK_LENSES = [null, '起步', '两难与协调', '合作', '稳定与停留', '摩擦与失落', '互助与过渡', '评估与选择', '练习与推进', '边界与积累', '负荷与收尾', '探索与学习', '速度与冲劲', '照顾与承接', '责任与统筹'];
+  function spreadLens(card, reversed) {
+    let lens;
+    if (card.arcana === 'major') {
+      const values = MAJOR_LENSES[card.rank] || [card.keywords.join('与'), '先用事实检验自己的理解', '小步检验'];
+      lens = { focus: values[0], guard: values[1], move: values[2], element: '方向', major: true };
+    } else {
+      const suit = SUIT_LENSES[card.suit] || SUIT_LENSES.pentacles;
+      lens = { ...suit, focus: suit.focus + '中的' + (RANK_LENSES[card.rank] || '调整'), major: false };
+    }
+    return { ...lens, reversed, name: `${card.name}（${reversed ? '逆位' : '正位'}）` };
+  }
+  function summarizeSpread(record, deck) {
+    const valid = validateRecord(record, deck);
+    if (!valid) throw new Error('无法解读不完整的三张牌阵');
+    const cards = valid.cards.map(draw => deck.find(card => card.id === draw.id));
+    const lenses = cards.map((card, i) => spreadLens(card, valid.cards[i].reversed));
+    const [state, blind, action] = lenses;
+    const topic = TOPICS[valid.topic];
+    const relation = state.element === action.element
+      ? `起点和行动牌都落在「${state.element}」这一层，今天不必另开战线，更值得把同一个问题做深、做实。`
+      : `这组牌把「${state.focus}」引向「${action.focus}」：不是继续在原来的层面用力，而是换一个落点来回应当前处境。`;
+    const stateLine = state.reversed
+      ? `${state.name}作为当下状态，先邀请你检视「${state.focus}」有没有卡住或用力过度；这不是对今天好坏的判决。`
+      : `${state.name}把今天的切入口放在「${state.focus}」；它提供一种可用的视角，但不保证事情自然顺利。`;
+    const blindLine = blind.reversed
+      ? `中间的${blind.name}提醒：被压住、拖延或走向极端的部分，可能让这个转向失效。`
+      : `中间的${blind.name}即使正位，放在盲点位也要求你检查它的代价，而不只是认同它的优点。`;
+    const actionLine = action.reversed
+      ? `因此，${action.name}给出的方向是先缩小动作、校正方法，再验证「${action.focus}」，而不是一口气扭转局面。`
+      : `因此，${action.name}适合被当作一次「${action.move}」的小实验，用实际结果检验前两张牌是否贴近现实。`;
+    const frame = {
+      general: '放回今天一件具体的小事里看：',
+      study: '放回今天的一项学习或工作任务里看：',
+      relationship: '放回一次真实的沟通里看，而不是推测对方内心：',
+      self: '放回自己的状态与习惯里看，不用急着给自己定性：'
+    }[valid.topic];
+    const blindMeaning = valid.cards[1].reversed ? cards[1].reversed : cards[1].upright;
+    const actionMeaning = valid.cards[2].reversed ? cards[2].reversed : cards[2].upright;
+    return {
+      title: `从「${state.focus}」到「${action.move}」`,
+      narrative: `${frame}${stateLine}${relation}${blindLine}${actionLine}`,
+      tension: `要让${state.name}所指的处境获得回应，先守住${blind.name}这一关：${blind.guard}。具体要留意：${blindMeaning.risk}`,
+      priorityAction: actionMeaning.action,
+      actionBridge: `把这一步用来回应「${state.focus}」，并把「${blind.guard}」作为执行边界；如果动作不适合现实，就缩小或调整，不必照牌硬做。`,
+      topicAction: topic.action,
+      checkpoint: `晚间核对：这一步是否真的帮助了「${state.focus}」？${blind.name}的风险有没有出现？请各记一条支持与不支持这份解读的事实。`,
+      references: lenses.map((lens, i) => ({ position: POSITIONS[i], name: cards[i].name, reversed: lens.reversed, label: lens.name })),
+      method: '综合解读由三张牌的位置、象征类别、正逆位及所选主题按固定规则组合；不是 AI 读心，也不是事实预测。'
+    };
+  }
+  const api = { STORAGE_KEY, TOPICS, POSITIONS, RATINGS, ACTIONS, localDate, isDate, randomInt, drawCards, makeRecord, validateRecord, parseBackup, createRepository, interpret, summarizeSpread };
   root.TarotCore = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
