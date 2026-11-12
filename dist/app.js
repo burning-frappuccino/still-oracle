@@ -35,7 +35,7 @@
         const art = el('span', 'card-art' + (draw.reversed ? ' reversed' : '')); art.innerHTML = window.tarotArtwork(card); art.setAttribute('aria-hidden', 'true');
         face.append(art, el('span', 'card-heading', card.arcana === 'major' ? String(card.rank).padStart(2, '0') : card.suit.toUpperCase()), el('span', 'card-title', card.name), el('span', 'card-subtitle', card.english.toUpperCase()));
         button.append(face, el('span', 'card-orientation', draw.reversed ? 'REVERSED · 逆位' : 'UPRIGHT · 正位'));
-        button.addEventListener('click', () => { selectCard(i); document.querySelector('.reading-tabs').scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' }); });
+        button.addEventListener('click', () => { $('full-reading').open = true; selectCard(i); document.querySelector('.reading-tabs').scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' }); });
       }
       spread.append(button);
     }
@@ -84,6 +84,10 @@
   }
   function renderSummary() {
     const summary = C.summarizeSpread(currentRecord, deck);
+    $('plain-title').textContent = summary.plain.title;
+    $('plain-now').textContent = summary.plain.now;
+    $('plain-caution').textContent = summary.plain.caution;
+    $('plain-action').textContent = summary.plain.action;
     $('summary-title').textContent = summary.title;
     $('summary-narrative').textContent = summary.narrative;
     $('summary-tension').textContent = summary.tension;

@@ -7,11 +7,11 @@
   <meta name="description" content="静观每日塔罗：不一味说好话，以78张牌、风险提醒和实际行动，开启一次诚实的自我对话。">
   <title>静观 · 每日塔罗</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261112-plain">
   <script src="deck.js" defer></script>
   <script src="artwork.js" defer></script>
-  <script src="core.js" defer></script>
-  <script src="app.js" defer></script>
+  <script src="core.js?v=20261112-plain" defer></script>
+  <script src="app.js?v=20261112-plain" defer></script>
 </head>
 <body>
   <div class="site-shell">
@@ -56,9 +56,22 @@
       </section>
 
       <section id="reading-section" class="reading-section" hidden aria-labelledby="reading-heading">
-        <div class="section-heading"><div><p class="eyebrow">YOUR DAILY REFLECTION</p><h2 id="reading-heading">一份不粉饰的解读</h2></div><p id="reading-context" class="subtle"></p></div>
+        <div class="section-heading"><div><p class="eyebrow">今日解读</p><h2 id="reading-heading">说简单一点</h2></div><p id="reading-context" class="subtle"></p></div>
         <p id="reading-question" class="reading-question" hidden></p>
-        <section id="spread-summary" class="spread-summary" aria-labelledby="summary-heading">
+        <section id="spread-summary" class="spread-summary plain-summary" aria-labelledby="plain-title">
+          <p class="plain-kicker">三张牌，先看这三点</p>
+          <h3 id="plain-title" class="plain-title"></h3>
+          <dl class="plain-lines">
+            <div><dt><span aria-hidden="true">01</span>你现在</dt><dd id="plain-now"></dd></div>
+            <div class="plain-caution"><dt><span aria-hidden="true">02</span>注意什么</dt><dd id="plain-caution"></dd></div>
+            <div class="plain-action"><dt><span aria-hidden="true">03</span>今天就做</dt><dd id="plain-action"></dd></div>
+          </dl>
+          <p class="plain-footnote">这是牌面的提醒，不是对未来的保证。不符合实际的，不必硬套。</p>
+        </section>
+        <details id="full-reading" class="full-reading">
+          <summary><span>看完整解读</span><span class="full-reading-hint">三牌分析 + 单牌详解</span></summary>
+          <div class="full-reading-content">
+          <section class="spread-summary full-summary" aria-labelledby="summary-heading">
           <div class="summary-heading"><div><p class="eyebrow">THE THREE-CARD STORY</p><h3 id="summary-heading">把三张牌，连起来看</h3></div><span aria-hidden="true">✦</span></div>
           <div id="summary-references" class="summary-references" aria-label="综合解读所用的三张牌"></div>
           <h4 id="summary-title" class="summary-title"></h4>
@@ -71,6 +84,8 @@
         <div class="reading-tabs" role="tablist" aria-label="选择解读的牌"></div>
         <div id="reading-detail" class="reading-detail" role="tabpanel" tabindex="0"></div>
         <p class="method-note">解读方式：原创象征牌义 + 所选主题规则，并非 AI 读心或对未来的事实判断。逆位不等于坏，正位也不保证顺利。</p>
+          </div>
+        </details>
         <section class="journal-editor" aria-labelledby="journal-heading">
           <div><p class="eyebrow">MAKE IT REAL</p><h2 id="journal-heading">把今天，交还给自己。</h2><p>留一个行动，晚些时候用现实核对。</p><p class="privacy-note">手记自动保存在当前浏览器，不上传、不跨设备同步。<br>建议在「我的手记」中定期导出。</p></div>
           <form id="reflection-form">

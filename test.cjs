@@ -110,4 +110,68 @@ test('incomplete, duplicate or invalid spread rejected instead of invented inter
   assert.throws(() => C.summarizeSpread({ ...record, cards: [record.cards[0], record.cards[0], record.cards[2]] }, deck));
   assert.throws(() => C.summarizeSpread({ ...record, topic: '__proto__' }, deck));
 });
+test('plain readings cover every card and orientation with short complete everyday sentences', () => {
+  const limits = { title: 18, now: 52, caution: 52, action: 52, link: 42 };
+  const states = new Set();
+  for (let i = 0; i < 78; i++) for (let mask = 0; mask < 8; mask++) for (const topic of Object.keys(C.TOPICS)) {
+    const record = summaryRecord([i, (i + 1) % 78, (i + 2) % 78], [0, 1, 2].map(j => !!(mask & (1 << j))), topic);
+    const plain = C.summarizeSpread(record, deck).plain;
+    for (const [key, limit] of Object.entries(limits)) {
+      assert.ok(typeof plain[key] === 'string' && plain[key].length > (key === 'title' ? 2 : 5) && plain[key].length <= limit, `${i}/${mask}/${topic}/${key}`);
+      assert.ok(!/切入口|落点|检视|张力|执行边界|滋养|可逆试验|委托|交付物|原型/.test(plain[key]), `${key}: ${plain[key]}`);
+      if (key !== 'title') assert.ok(/[。！？]$/.test(plain[key]), 'No mechanically cut sentence: ' + plain[key]);
+    }
+    assert.ok(plain.now.startsWith('你可能')); states.add(plain.now);
+  }
+  assert.equal(states.size, 156);
+});
+test('plain now, caution and action follow their own card positions and orientations', () => {
+  const base = C.summarizeSpread(summaryRecord([67, 9, 3]), deck).plain;
+  assert.equal(base.now, '你可能想守住时间和手里的东西，不太敢松手。');
+  const changeFirst = C.summarizeSpread(summaryRecord([23, 9, 3]), deck).plain;
+  assert.notEqual(base.now, changeFirst.now); assert.equal(base.caution, changeFirst.caution); assert.equal(base.action, changeFirst.action);
+  const changeMiddle = C.summarizeSpread(summaryRecord([67, 54, 3]), deck).plain;
+  assert.equal(base.now, changeMiddle.now); assert.notEqual(base.caution, changeMiddle.caution); assert.equal(base.action, changeMiddle.action);
+  const changeLast = C.summarizeSpread(summaryRecord([67, 9, 22]), deck).plain;
+  assert.equal(base.now, changeLast.now); assert.equal(base.caution, changeLast.caution); assert.notEqual(base.action, changeLast.action);
+  for (const [index, key] of [[0, 'now'], [1, 'caution'], [2, 'action']]) {
+    const orientations = [false, false, false]; orientations[index] = true;
+    assert.notEqual(base[key], C.summarizeSpread(summaryRecord([67, 9, 3], orientations), deck).plain[key]);
+  }
+});
+test('plain reading keeps concrete risks and actions rather than a generic pep talk', () => {
+  const record = summaryRecord([33, 30, 31], [true, true, false]);
+  const plain = C.summarizeSpread(record, deck).plain;
+  assert.equal(plain.caution, '别一直硬撑，累到连事情都想不清楚。');
+  assert.equal(plain.action, '列出手上的事，选一件推迟、不做，或分给别人做。');
+  assert.ok(!plain.action.includes('小实验')); assert.ok(!plain.caution.includes('好运'));
+});
+test('plain reading is stable, old-backup compatible and ignores untrusted question text', () => {
+  const record = summaryRecord(); const before = JSON.stringify(record); const expected = C.summarizeSpread(record, deck).plain;
+  assert.deepEqual(expected, C.summarizeSpread(record, deck).plain); assert.equal(JSON.stringify(record), before);
+  const restored = C.parseBackup(JSON.stringify({ schemaVersion: 1, records: { [record.date]: record } }), deck);
+  assert.deepEqual(expected, C.summarizeSpread(restored[record.date], deck).plain);
+  record.question = '<img src=x onerror=alert(1)>'; record.reflection = '<script>bad()</script>';
+  assert.deepEqual(expected, C.summarizeSpread(record, deck).plain);
+});
+test('plain link uses the chosen topic without pretending to read the question', () => {
+  const links = new Set();
+  for (const topic of Object.keys(C.TOPICS)) {
+    const summary = C.summarizeSpread(summaryRecord([67, 9, 3], [false, true, false], topic), deck);
+    links.add(summary.plain.link);
+    assert.ok(summary.plain.link.includes(summary.plain.title.replace(/^先/, '')));
+  }
+  assert.equal(links.size, 4);
+});
+test('full interpretation matches the original d28c3bc snapshot across 2496 cases', () => {
+  // Generated and independently deep-compared against d28c3bc before this change.
+  // Self-contained digest avoids requiring old Git history in shallow CI checkouts.
+  const digest = require('node:crypto').createHash('sha256');
+  for (let i = 0; i < 78; i++) for (let mask = 0; mask < 8; mask++) for (const topic of Object.keys(C.TOPICS)) {
+    const record = summaryRecord([i, (i + 1) % 78, (i + 2) % 78], [0, 1, 2].map(j => !!(mask & (1 << j))), topic);
+    const { plain, ...full } = C.summarizeSpread(record, deck);
+    digest.update(JSON.stringify(full) + '\n');
+  }
+  assert.equal(digest.digest('hex'), '3157f2ba343085bca468e253c421f7cbfc020ae05d3a01c451ce3eec3b3c75f9');
+});
 console.log(`\n${passed}/${passed} tests passed. No divinatory effectiveness claim is tested or established.`);
